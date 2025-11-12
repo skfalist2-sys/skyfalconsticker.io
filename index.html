@@ -70,27 +70,15 @@
             height: 0.50in;
         }
         
-        .left-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #000;
-        }
-        
-        .qr-container {
+        .qr-section {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 1px;
+            border-right: 1px solid #000;
         }
         
-        #qrcode {
-            width: 50px;
-            height: 50px;
-        }
-        
-        .barcode-container {
+        .barcode-section {
             flex: 2;
             display: flex;
             align-items: center;
@@ -104,13 +92,18 @@
             height: 85%;
         }
         
-        .tester {
+        .tester-section {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 10pt;
             font-weight: 800;
+        }
+
+        #qrcode {
+            width: 45px;
+            height: 45px;
         }
 
         @media print {
@@ -143,20 +136,18 @@
             <div class="uid" id="uid"></div>
         </div>
         <div class="bottom-row">
-            <div class="left-section">
-                <div class="qr-container">
-                    <canvas id="qrcode"></canvas>
-                </div>
+            <div class="qr-section">
+                <div id="qrcode"></div>
             </div>
-            <div class="barcode-container">
+            <div class="barcode-section">
                 <svg id="barcode"></svg>
             </div>
-            <div class="tester" id="tester"></div>
+            <div class="tester-section" id="tester"></div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     
     <script>
         function getUrlParams() {
@@ -172,23 +163,49 @@
 
         function generateQRCode(elementId, text) {
             try {
-                QRCode.toCanvas(document.getElementById(elementId), text, {
-                    width: 50,
-                    height: 50,
-                    margin: 0,
-                    color: {
-                        dark: '#000000',
-                        light: '#FFFFFF'
+                // Use qrcode-generator library
+                const typeNumber = 0; // Auto
+                const errorCorrectionLevel = 'L';
+                const qr = qrcode(typeNumber, errorCorrectionLevel);
+                qr.addData(text);
+                qr.make();
+                
+                const qrSize = 45;
+                const cellSize = Math.floor(qrSize / qr.getModuleCount());
+                const actualSize = qr.getModuleCount() * cellSize;
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = qrSize;
+                canvas.height = qrSize;
+                const ctx = canvas.getContext('2d');
+                
+                // Fill white background
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, qrSize, qrSize);
+                
+                // Draw QR code
+                ctx.fillStyle = '#000000';
+                for (let row = 0; row < qr.getModuleCount(); row++) {
+                    for (let col = 0; col < qr.getModuleCount(); col++) {
+                        if (qr.isDark(row, col)) {
+                            ctx.fillRect(
+                                col * cellSize, 
+                                row * cellSize, 
+                                cellSize, 
+                                cellSize
+                            );
+                        }
                     }
-                }, function(err) {
-                    if (err) {
-                        console.error('QR Code error:', err);
-                        document.getElementById(elementId).innerHTML = '<div style="font-size:6pt; text-align:center;">QR<br>CODE</div>';
-                    }
-                });
+                }
+                
+                document.getElementById(elementId).innerHTML = '';
+                document.getElementById(elementId).appendChild(canvas);
+                
             } catch (err) {
                 console.error('QR Code generation failed:', err);
-                document.getElementById(elementId).innerHTML = '<div style="font-size:6pt; text-align:center;">QR<br>ERR</div>';
+                // Fallback: show text
+                document.getElementById(elementId).innerHTML = 
+                    '<div style="font-size:6pt; text-align:center; color:red;">QR<br>ERR</div>';
             }
         }
 
@@ -204,7 +221,7 @@
             document.getElementById('tester').textContent = params.tester;
             document.getElementById('condition').textContent = params.condition;
 
-            // Generate UID barcode (CENTER)
+            // Generate UID barcode
             try {
                 JsBarcode("#barcode", params.uid, {
                     format: "CODE128",
@@ -218,7 +235,7 @@
                 console.error('Barcode error:', err);
             }
 
-            // Generate SKU QR code (LEFT)
+            // Generate SKU QR code
             generateQRCode('qrcode', params.sku);
 
             // Auto-print after delay
