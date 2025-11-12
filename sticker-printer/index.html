@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Sticker Printer</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px; 
+        }
+        .container { 
+            text-align: center; 
+        }
+        .test-link { 
+            display: block; 
+            margin: 10px 0; 
+            padding: 10px; 
+            background: #007cba; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 5px; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Sticker Printer</h1>
+        <p>Use this service with your AppSheet app to print SKU labels.</p>
+        
+        <h3>Test Links:</h3>
+        <a class="test-link" href="print.html?sku=S12345&title=Test Product Name&condition=New&detail=Black Color">
+            Test Sticker 1
+        </a>
+        <a class="test-link" href="print.html?sku=S67890&title=Another Test Product With Longer Name&condition=Used&detail=Large Size">
+            Test Sticker 2
+        </a>
+        
+        <h3>AppSheet URL Format:</h3>
+        <code>
+            https://yoursite.netlify.app/print.html?sku=SKU_VALUE&title=TITLE&condition=CONDITION&detail=DETAIL
+        </code>
+    </div>
+</body>
+</html>
