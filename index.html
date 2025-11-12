@@ -26,7 +26,6 @@
             box-sizing: border-box;
         }
         
-        /* Top row: Title only */
         .title-row {
             display: flex; 
             align-items: center; 
@@ -41,7 +40,6 @@
             border-bottom: 1px solid #000;
         }
         
-        /* Middle row: SKU left, UID right */
         .sku-uid-row {
             display: flex;
             justify-content: space-between;
@@ -61,7 +59,6 @@
             text-align: right;
         }
         
-        /* Bottom row: Condition + QR left, Barcode center, Tester right */
         .bottom-row {
             display: flex;
             height: 0.50in;
@@ -95,8 +92,8 @@
         }
         
         .qr-code {
-            width: 90%;
-            height: 90%;
+            width: 70%;
+            height: 70%;
         }
         
         .barcode-container {
@@ -122,7 +119,6 @@
             border-left: 1px solid #000;
         }
 
-        /* Print styles */
         @media print {
             body {
                 -webkit-print-color-adjust: exact;
@@ -130,7 +126,6 @@
             }
         }
 
-        /* Screen styles */
         @media screen {
             body {
                 display: flex;
@@ -147,21 +142,16 @@
 </head>
 <body>
     <div class="label">
-        <!-- Row 1: Title -->
         <div class="title-row" id="title">Loading...</div>
-        
-        <!-- Row 2: SKU left, UID right -->
         <div class="sku-uid-row">
             <div class="sku" id="sku"></div>
             <div class="uid" id="uid"></div>
         </div>
-        
-        <!-- Row 3: Condition + QR left, Barcode center, Tester right -->
         <div class="bottom-row">
             <div class="left-section">
                 <div class="condition" id="condition"></div>
                 <div class="qr-container">
-                    <img class="qr-code" id="qrcode" alt="QR Code">
+                    <canvas id="qrcode"></canvas>
                 </div>
             </div>
             <div class="barcode-container">
@@ -171,41 +161,42 @@
         </div>
     </div>
 
-    <!-- Barcode & QR code libraries -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     
     <script>
-        // Get URL parameters
         function getUrlParams() {
             const urlParams = new URLSearchParams(window.location.search);
             return {
                 sku: urlParams.get('sku') || 'MISSING_SKU',
                 title: urlParams.get('title') || 'MISSING_TITLE',
-                condition: urlParams.get('condition') || '',
-                detail: urlParams.get('detail') || '',
+                condition: urlParams.get('condition') || 'NO CONDITION',
                 uid: urlParams.get('uid') || '',
                 tester: urlParams.get('tester') || 'TEST'
             };
         }
 
-        // Generate QR code
         function generateQRCode(elementId, text) {
-            QRCode.toDataURL(text, {
-                width: 80,
-                height: 80,
-                margin: 1,
-                color: {
-                    dark: '#000000',
-                    light: '#FFFFFF'
-                }
-            }, function(err, url) {
-                if (err) console.error('QR Code error:', err);
-                document.getElementById(elementId).src = url;
-            });
+            try {
+                QRCode.toCanvas(document.getElementById(elementId), text, {
+                    width: 60,
+                    height: 60,
+                    margin: 1,
+                    color: {
+                        dark: '#000000',
+                        light: '#FFFFFF'
+                    }
+                }, function(err) {
+                    if (err) {
+                        console.error('QR Code error:', err);
+                        document.getElementById(elementId).innerHTML = 'QR Error';
+                    }
+                });
+            } catch (err) {
+                console.error('QR Code generation failed:', err);
+            }
         }
 
-        // Update sticker content
         function updateSticker() {
             const params = getUrlParams();
             
@@ -216,32 +207,30 @@
             document.getElementById('sku').textContent = params.sku;
             document.getElementById('uid').textContent = params.uid;
             document.getElementById('tester').textContent = params.tester;
-            
-            // Combine condition and detail if needed
-            if (params.detail) {
-                document.getElementById('condition').textContent = 
-                    params.condition + ' | ' + params.detail;
-            } else {
-                document.getElementById('condition').textContent = params.condition;
+            document.getElementById('condition').textContent = params.condition;
+
+            // Generate UID barcode
+            try {
+                JsBarcode("#barcode", params.uid, {
+                    format: "CODE128",
+                    displayValue: false,
+                    lineColor: "#000",
+                    width: 2,
+                    height: 40,
+                    margin: 0
+                });
+            } catch (err) {
+                console.error('Barcode error:', err);
             }
 
-            // Generate UID barcode (large, center)
-            JsBarcode("#barcode", params.uid, {
-                format: "CODE128",
-                displayValue: false,
-                lineColor: "#000",
-                width: 2,
-                height: 40,
-                margin: 0
-            });
-
-            // Generate SKU QR code (small, left side)
+            // Generate SKU QR code
             generateQRCode('qrcode', params.sku);
 
-            // Auto-print after a short delay
+            // Auto-print after delay
             setTimeout(() => {
+                console.log('Attempting to print...');
                 window.print();
-            }, 1000);
+            }, 1500);
         }
 
         // Handle print events
@@ -249,8 +238,28 @@
             console.log('Print completed or cancelled');
         };
 
+        // Add manual print button as backup
+        function addManualPrintButton() {
+            const btn = document.createElement('button');
+            btn.textContent = 'PRINT STICKER';
+            btn.style.position = 'fixed';
+            btn.style.top = '10px';
+            btn.style.right = '10px';
+            btn.style.zIndex = '1000';
+            btn.style.padding = '10px';
+            btn.style.background = '#007cba';
+            btn.style.color = 'white';
+            btn.style.border = 'none';
+            btn.style.borderRadius = '5px';
+            btn.onclick = () => window.print();
+            document.body.appendChild(btn);
+        }
+
         // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', updateSticker);
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSticker();
+            addManualPrintButton(); // Add backup print button
+        });
     </script>
 </body>
 </html>
